@@ -159,8 +159,10 @@ elif Select == "Data Extract":
                         card_data["company_name"].append(i)
                     
                     # Check for mobile number
-                    if "+" in i or "+91" in i or "-" in i:
+                    elif "+" in i or "+91" in i or "-" in i:
                         card_data["mobile_no"].append(i)
+                        if len(card_data["mobile_no"])==2:
+                            card_data["mobile_no"] = " & " .join(card_data["mobile_no"])
                         
                     # Check for website
                     if "www" in i.lower() or "www." in i.lower():
@@ -190,19 +192,19 @@ elif Select == "Data Extract":
                         card_data["city"].append(match3[0])
 
                     # Extract state
-                    state_match = re.findall('[a-zA-Z]{9} +[0-9]', i)
+                    state_match = re.findall('[a-zA-Z]{9} +[0-9]',i)
                     if state_match:
                         card_data["state"].append(i[:9])
                     elif re.findall('^[0-9].+, ([a-zA-Z]+);', i):
                         card_data["state"].append(i.split()[-1])
-                    if len(i) == 2:
+                    if len(card_data["state"]) == 2:
                         card_data["state"].pop(0)
                 
                     # Extract pincode
                     if len(i) >= 6 and i.isdigit():
                         card_data["pincode"].append(i)
                     elif re.findall('[a-zA-Z]{9} +[0-9]', i):
-                        card_data["pincode"].append(i[10:])
+                        card_data["pincode"].append(i[10:]) 
                       
         card_data_ext(result)
         df = pd.DataFrame(card_data)
@@ -372,31 +374,37 @@ elif Select == "Make change":
 
 elif Select == "Remove Data":
     st.header("Remove Data in MySQL")
-    
+
+coll1, coll2, coll3, coll4 = st.columns(4)
+with coll1:
     try:
         connection = mysql_connect()
         mycursor = connection.cursor()
         select_query = "SELECT card_holder_name FROM card_data"
         mycursor.execute(select_query)
         rows = mycursor.fetchall()
-            
-        card_detial = {}
+        
+        card_detail = {}
         for row in rows:
-            card_detial[row[0]] = row[0]
-        options = ['None'] + list(card_detial.keys())
+            card_detail[row[0]] = row[0]
+        
+        options = ['None'] + list(card_detail.keys())
         selected_card = st.selectbox("Select a Card", options)
+        
         if selected_card == "None":
             st.write("No Card Selected")
         else:
-            st.write(f"You have selected: {selected_card} need to delete?")
-            if st.button("Confirm Again"):
-                mycursor.execute(f"DELETE FROM card_data where card_holder_name = '{selected_card}'")
-                connection.commit()
-                st.success("Selected Card Detailed is remove form MySQL")
+            st.write(f"You have selected: {selected_card}. Do you want to delete?")
+            if st.button("Confirm Delete"):
+                try:
+                    mycursor.execute(f"DELETE FROM card_data WHERE card_holder_name = '{selected_card}'")
+                    connection.commit()
+                    st.success("Selected Card Detail removed from MySQL")
+                except mysql.connector.Error as err:
+                    st.warning(f"MySQL Error: {err}")
+                except Exception as e:
+                    st.warning(f"An error occurred: {e}")
     except mysql.connector.Error as err:
         st.warning(f"MySQL Error: {err}")
     except Exception as e:
         st.warning(f"An error occurred: {e}")
-                
-            
-            
